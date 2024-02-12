@@ -63,7 +63,8 @@ class URL:
 
         return body
     
-def show(body):
+def lex(body):
+    text = ""
     in_tag = False
 
     for c in body:
@@ -72,12 +73,13 @@ def show(body):
         elif c == ">":
             in_tag = False
         elif not in_tag:
-            print(c, end="")
+            text += c
+    return text 
     
 def load(url):
     body = url.request()
-    show(body)
+    return lex(body)
 
-if __name__ == "__main__":
-    import sys
-    load(URL(sys.argv[1]))
+# if __name__ == "__main__":
+#     import sys
+#     load(URL(sys.argv[1]))
