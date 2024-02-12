@@ -80,6 +80,3 @@ def load(url):
     body = url.request()
     return lex(body)
 
-# if __name__ == "__main__":
-#     import sys
-#     load(URL(sys.argv[1]))
