@@ -1,5 +1,6 @@
 import ssl 
 import socket
+from tkinter.font import Font
 
 class URL:
     def __init__(self, url):
@@ -62,20 +63,41 @@ class URL:
         s.close()
 
         return body
+
+class Text:
+    def __init__(self, text):
+        self.text = text
     
+    def __repr__(self):
+        return "Text('{}')".format(self.text)
+
+class Tag:
+    def __init__(self, tag):
+        self.tag = tag
+    def __repr__(self):
+        return "Tag('{}')".format(self.tag)
+
 def lex(body):
-    text = ""
+    out = []
+    buffer = ""
     in_tag = False
 
     for c in body:
         if c == "<":
+            if buffer: out.append(Text(buffer))
+            buffer = ""
             in_tag = True
         elif c == ">":
+            out.append(Tag(buffer))
             in_tag = False
-        elif not in_tag:
-            text += c
-    return text 
+            buffer = ""
+        else:
+            buffer += c
+    if not in_tag and buffer:
+        out.append(Text(buffer))
+    return out 
     
+
 def load(url):
     body = url.request()
     return lex(body)
