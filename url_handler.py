@@ -65,17 +65,23 @@ class URL:
         return body
 
 class Text:
-    def __init__(self, text):
+    def __init__(self, text, parent):
         self.text = text
+        self.children = []
+        self.parent = parent
     
     def __repr__(self):
-        return "Text('{}')".format(self.text)
+        return repr(self.text)
 
-class Tag:
-    def __init__(self, tag):
+class Element:
+    def __init__(self, tag, parent):
         self.tag = tag
+        self.attributes = attributes
+        self.children = []
+        self.parent = parent
+
     def __repr__(self):
-        return "Tag('{}')".format(self.tag)
+        return "<" + self.tag + ">"
 
 def lex(body):
     out = []
@@ -84,12 +90,12 @@ def lex(body):
 
     for c in body:
         if c == "<":
+            in_tag = True
             if buffer: out.append(Text(buffer))
             buffer = ""
-            in_tag = True
         elif c == ">":
-            out.append(Tag(buffer))
             in_tag = False
+            out.append(Tag(buffer))
             buffer = ""
         else:
             buffer += c
@@ -100,5 +106,6 @@ def lex(body):
 
 def load(url):
     body = url.request()
-    return lex(body)
+    # return lex(body)
+    return body
 
