@@ -23,7 +23,6 @@ def get_font(size, weight, slant):
     return FONTS[key][0]
 class Layout:
     def __init__(self, tree):
-        self.tokens = tokens
         self.display_list = []
 
         self.cursor_x = HSTEP
@@ -34,8 +33,6 @@ class Layout:
 
         self.line = []
 
-        # for tok in tokens:
-        #     self.token(tok)
         self.recurse(tree)
         self.flush()
     

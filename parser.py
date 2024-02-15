@@ -1,5 +1,7 @@
 from url_handler import Element, Text
 
+# I am not handling a body that starts with just text properly. I have to go over how I am setting the first node.
+
 
 class HTMLParser:
     def __init__(self, body):
@@ -29,7 +31,7 @@ class HTMLParser:
     def add_text(self, text):
         if text.isspace():
             return
-
+        print(self.unfinished[-1])
         parent = self.unfinished[-1]
         node = Text(text, parent)
         parent.children.append(node)
@@ -42,8 +44,6 @@ class HTMLParser:
 
         if tag.startswith("!"):
             return
-        if text.isspace():
-            return
 
         if tag.startswith("/"):
             if len(self.unfinished) == 1:
@@ -53,15 +53,15 @@ class HTMLParser:
             parent.children.append(node)
         elif tag in self.SELF_CLOSING_TAGS:
             parent = self.unfinished[-1]
-            node = Element(tag, parent)
+            node = Element(tag, attributes, parent)
             parent.children.append(node)
         else:
             parent = self.unfinished[-1] if self.unfinished else None
-            node = Element(tag, parent)
+            node = Element(tag, attributes, parent)
             self.unfinished.append(node)
 
     def finish(self):
-        while len(self.unfinished > 1):
+        while len(self.unfinished) > 1:
             node = self.unfinished.pop()
             parent = self.unfinished[-1]
             parent.children.append(node)
@@ -73,16 +73,18 @@ class HTMLParser:
         attributes = {}
         for attrpair in parts[1:]:
             if "=" in attrpair:
-                key, value = attrpair.split("=")
+                key, value = attrpair.split("=", 1)
                 attributes[key.casefold()] = value
-            if len(value) > 2 and value[0] in ["'", "\""]:
-                value = value[1:-1]
+                if len(value) > 2 and value[0] in ["'", "\""]:
+                    value = value[1:-1]
+                attributes[key.casefold()] = value
             else:
                 attributes[attrpair.casefold()] = ""
 
         return tag, attributes
 
-    def print_tree(node, indent=0):
-        print(" "*indent, node)
-        for child in node.children:
-            print_tree(child, indent + 2)
+
+def print_tree(node, indent=0):
+    print(" "*indent, node)
+    for child in node.children:
+        print_tree(child, indent + 2)
