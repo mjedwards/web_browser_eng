@@ -41,6 +41,12 @@ class URL:
                 else:
                     self.path = os.path.join(os.getcwd(), url)
             
+            elif self.scheme == "data":
+                self.host = None
+                self.port = None
+
+                # complete the ability for the browser to read data:text/html,Hello World!
+            
         else:
             self.scheme = "file"
 
