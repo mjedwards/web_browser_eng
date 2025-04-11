@@ -1,29 +1,79 @@
 import ssl 
 import socket
+import os
 from tkinter.font import Font
 
 class URL:
     def __init__(self, url):
-        self.scheme, url = url.split("://", 1)
-        assert self.scheme in  ["http", "https"]
+        if not url:
+            url = "file://" + os.path.join(os.path.expanduser("~"), g_index.html)
 
-        if self.scheme == "http":
-            self.port = 30
-        elif self.scheme == "https":
-            self.port = 443
+        if "://" in url:
+            self.scheme, url = url.split("://", 1)
+        
 
-        if "/" not in url:
-            url = url + "/"
+            if self.scheme in ["http", "https"]:
+                if self.scheme == "http":
+                    self.port = 80
+                else:
+                    self.port = 443
 
-        self.host, url = url.split("/", 1)
+                if "/" not in url:
+                    url = url + "/"
 
-        self.path = "/" + url
+                self.host, url = url.split("/", 1)
+                self.path = "/" + url
 
-        if ":" in self.host:
-            self.host, port = self.host.split(":", 1)
-            self.port = int(port)
+                if ":" in self.host:
+                    self.host, port = self.host.split(":", 1)
+                    self.port = int(port)
 
-    def request(self):
+            elif self.scheme == "file":
+                self.host = None
+                self.port = None
+
+                if url.startswith("/"):
+                    self.path = "/" + url
+                elif url.startswith("\\"):
+                    self.path = url
+                elif len(url) >= 2 and url[1] == ":":
+                    self.path = url
+                else:
+                    self.path = os.path.join(os.getcwd(), url)
+            
+        else:
+            self.scheme = "file"
+
+            if url.startswith("/"):
+                    self.path = "/" + url
+            elif os.name == 'nt' and (url.startswith("\\") or (len(url) >= 2 and url[1] == ":")):
+                self.path = url
+            else:
+                self.path = os.path.join(os.getcwd(), url)
+
+            self.host = None
+            self.port = None
+
+    def request (self):
+        if self.scheme == "file":
+            return  self.read_file()
+        else:
+            return self.http_request()
+
+    def read_file(self):
+        try:
+            path = self.path
+        
+            if os.name == 'nt':
+                if path.startswith("/"):
+                    path = path[1:]
+        
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            return f"<html><body><h1>Error</h1><p>Could not read file: {e}</p></body></html>"
+
+    def http_request(self):
         s = socket.socket(
             family=socket.AF_INET, 
             type=socket.SOCK_STREAM,
@@ -63,19 +113,29 @@ class URL:
         s.close()
 
         return body
-
+        
 class Text:
-    def __init__(self, text):
+    def __init__(self, text, parent):
         self.text = text
+        self.children = []
+        self.parent = parent
     
     def __repr__(self):
-        return "Text('{}')".format(self.text)
+        return repr(self.text)
 
-class Tag:
-    def __init__(self, tag):
+class Element:
+    def __init__(self, tag, attributes, parent):
         self.tag = tag
+        self.attributes = attributes
+        self.children = []
+        self.parent = parent
+
     def __repr__(self):
-        return "Tag('{}')".format(self.tag)
+        attrs = [" " + k + "=\"" + v + "\"" for k,v in self.attributes.items()]
+        attr_str = ""
+        for attr in attrs:
+            attr_str += attr
+        return "<" + self.tag + attr_str + ">"
 
 def lex(body):
     out = []
@@ -84,12 +144,12 @@ def lex(body):
 
     for c in body:
         if c == "<":
+            in_tag = True
             if buffer: out.append(Text(buffer))
             buffer = ""
-            in_tag = True
         elif c == ">":
-            out.append(Tag(buffer))
             in_tag = False
+            out.append(Tag(buffer))
             buffer = ""
         else:
             buffer += c
@@ -100,5 +160,6 @@ def lex(body):
 
 def load(url):
     body = url.request()
-    return lex(body)
+    # return lex(body)
+    return body
 
