@@ -1,5 +1,5 @@
 import tkinter
-from url_handler import URL,Text, load
+from url_handler import URL, Text, load
 from tkinter.font import Font
 from parser import HTMLParser
 
@@ -10,17 +10,20 @@ HSTEP, VSTEP = 13, 18
 
 FONTS = {}
 
-def get_font(size, weight, slant): 
+
+def get_font(size, weight, slant):
     key = (size, weight, slant)
     if key not in FONTS:
         font = Font(
-            size=size, 
-            weight=weight, 
+            size=size,
+            weight=weight,
             slant=slant
         )
         label = tkinter.Label(font=font)
         FONTS[key] = (font, label)
     return FONTS[key][0]
+
+
 class Layout:
     def __init__(self, tree):
         self.display_list = []
@@ -35,7 +38,7 @@ class Layout:
 
         self.recurse(tree)
         self.flush()
-    
+
     def open_tag(self, tag):
         if tag == "i":
             self.style = "italic"
@@ -47,7 +50,6 @@ class Layout:
             self.size += 4
         elif tag == "br":
             self.flush()
-
 
     def close_tag(self, tag):
         if tag == "i":
@@ -61,7 +63,7 @@ class Layout:
         elif tag == "p":
             self.flush()
             self.cursor_y += VSTEP
-    
+
     def recurse(self, tree):
         if isinstance(tree, Text):
             for word in tree.text.split():
@@ -76,7 +78,7 @@ class Layout:
     #     if isinstance(tok, Text):
     #         for word in tok.text.split():
     #             self.word(word)
-                
+
     #     elif tok.tag == "i":
     #         self.style = "italic"
     #     elif tok.tag == "/i":
@@ -98,12 +100,12 @@ class Layout:
     #     elif tok.tag == "/p":
     #         self.flush()
     #         self.cursor_y += VSTEP
-        
+
     #     self.cursor_x += HSTEP
     #     if self.cursor_x >= WIDTH - HSTEP:
     #         self.cursor_y += VSTEP
     #         self.cursor_x = HSTEP
-    
+
     def word(self, word):
         font = get_font(self.size, self.weight, self.style)
         w = font.measure(word)
@@ -112,34 +114,35 @@ class Layout:
             self.flush()
         self.line.append((self.cursor_x, word, font))
         self.cursor_x += w + font.measure(" ")
-    
+
     def flush(self):
-        if not self.line: return
+        if not self.line:
+            return
 
         metrics = [font.metrics() for x, word, font in self.line]
-        
-        max_ascent = max([font.metrics("ascent") for x, word, font in self.line])
+
+        max_ascent = max([font.metrics("ascent")
+                         for x, word, font in self.line])
         baseline = self.cursor_y + 1.25 * max_ascent
-        
 
         for x, word, font in self.line:
             y = baseline - font.metrics("ascent")
             self.display_list.append((x, y, word, font))
-        
-            
-        
-        max_descent = max([font.metrics("descent") for x, word, font in self.line])
-        
+
+        max_descent = max([font.metrics("descent")
+                          for x, word, font in self.line])
+
         self.cursor_y = baseline + 1.25 * max_descent
         self.cursor_x = HSTEP
         self.line = []
-        
+
+
 class Browser:
     def __init__(self):
         self.window = tkinter.Tk()
         self.canvas = tkinter.Canvas(
             self.window,
-            width=WIDTH, 
+            width=WIDTH,
             height=HEIGHT
         )
         self.canvas.pack()
@@ -147,8 +150,6 @@ class Browser:
         self.window.bind("<Up>", self.scrollUp)
         self.window.bind("<Down>", self.scrollDown)
         self.display_list = []
-        
-        
 
     def scrollUp(self, e):
         self.scroll -= SCROLL_STEP
@@ -161,18 +162,26 @@ class Browser:
     def draw(self):
         self.canvas.delete("all")
         for x, y, word, font in self.display_list:
-            if y > self.scroll + HEIGHT: continue
-            if y + font.metrics("linespace") < self.scroll: continue
-            self.canvas.create_text(x, y - self.scroll ,text=word, font=font, anchor="nw")
+            if y > self.scroll + HEIGHT:
+                continue
+            if y + font.metrics("linespace") < self.scroll:
+                continue
+            self.canvas.create_text(
+                x, y - self.scroll, text=word, font=font, anchor="nw")
 
     def load(self, url):
         body = load(URL(url))
         self.nodes = HTMLParser(body).parse()
         self.display_list = Layout(self.nodes).display_list
         self.draw()
-        
+
 
 if __name__ == "__main__":
     import sys
-    Browser().load(sys.argv[1])
+    if (len(sys.argv) == 1):
+        # specify a file to load
+        Browser().load("./g_index.g_index.html")
+    else:
+        Browser().load(sys.argv[1])
+
     tkinter.mainloop()
