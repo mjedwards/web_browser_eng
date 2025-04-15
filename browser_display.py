@@ -69,6 +69,38 @@ class Layout:
         if isinstance(tree, Text):
             for word in tree.text.split():
                 self.word(word)
+
+        # elif tree.tag == "h1":
+        #     self.size += 4
+        # elif tree.tag == "/h1":
+        #     self.size -= 4
+        elif tree.tag == "i":
+            self.style = "italic"
+        elif tree.tag == "/i":
+            self.style = "roman"
+        elif tree.tag == "b":
+            self.weight = "bold"
+        elif tree.tag == "/b":
+            self.weight = "normal"
+        elif tree.tag == "small":
+            self.size -= 2
+        elif tree.tag == "/small":
+            self.size += 2
+        elif tree.tag == "big":
+            self.size += 4
+        elif tree.tag == "/big":
+            self.size -= 4
+        elif tree.tag == "br":
+            self.flush()
+        elif tree.tag == "/p":
+            self.flush()
+            self.cursor_y += VSTEP
+
+        # self.cursor_x += HSTEP
+        # if self.cursor_x >= WIDTH - HSTEP:
+        #     self.cursor_y += VSTEP
+        #     self.cursor_x = HSTEP
+
         else:
             self.open_tag(tree.tag)
             for child in tree.children:
@@ -157,14 +189,14 @@ class Browser:
         self.window.bind("<Down>", self.scrollDown)
         # self.window.bind_all("<MouseWheel>", self.mouseScroll)
         if sys.platform == "darwin":
-            self.canvas.bind("<Button-4>", self.scrollUp) 
+            self.canvas.bind("<Button-4>", self.scrollUp)
             self.canvas.bind("<Button-5>", self.scrollDown)
             self.canvas.bind("<Button-2>", self.mouseScroll)
             self.canvas.bind("<MouseWheel>", self.mouseScroll)
-        
+
             # For newer versions of macOS and Tk
             self.canvas.bind("<MouseWheel>", lambda e: self.mouseScroll(e))
-        
+
         self.display_list = []
 
     def scrollUp(self, e):
