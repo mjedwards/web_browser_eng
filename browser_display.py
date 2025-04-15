@@ -2,6 +2,7 @@ import tkinter
 from url_handler import URL, Text, load
 from tkinter.font import Font
 from parser import HTMLParser
+from sys import platform
 
 WIDTH, HEIGHT = 800, 600
 SCROLL_STEP = 100
@@ -68,6 +69,38 @@ class Layout:
         if isinstance(tree, Text):
             for word in tree.text.split():
                 self.word(word)
+
+        # elif tree.tag == "h1":
+        #     self.size += 4
+        # elif tree.tag == "/h1":
+        #     self.size -= 4
+        elif tree.tag == "i":
+            self.style = "italic"
+        elif tree.tag == "/i":
+            self.style = "roman"
+        elif tree.tag == "b":
+            self.weight = "bold"
+        elif tree.tag == "/b":
+            self.weight = "normal"
+        elif tree.tag == "small":
+            self.size -= 2
+        elif tree.tag == "/small":
+            self.size += 2
+        elif tree.tag == "big":
+            self.size += 4
+        elif tree.tag == "/big":
+            self.size -= 4
+        elif tree.tag == "br":
+            self.flush()
+        elif tree.tag == "/p":
+            self.flush()
+            self.cursor_y += VSTEP
+
+        # self.cursor_x += HSTEP
+        # if self.cursor_x >= WIDTH - HSTEP:
+        #     self.cursor_y += VSTEP
+        #     self.cursor_x = HSTEP
+
         else:
             self.open_tag(tree.tag)
             for child in tree.children:
@@ -140,24 +173,48 @@ class Layout:
 class Browser:
     def __init__(self):
         self.window = tkinter.Tk()
+        self.scrollbar = tkinter.Scrollbar(self.window, orient="vertical")
         self.canvas = tkinter.Canvas(
             self.window,
             width=WIDTH,
-            height=HEIGHT
+            height=HEIGHT,
+            yscrollcommand=self.scrollbar.set
         )
+
+        self.scrollbar.config(command=self.canvas.yview)
+        self.scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
         self.canvas.pack()
         self.scroll = 0
         self.window.bind("<Up>", self.scrollUp)
         self.window.bind("<Down>", self.scrollDown)
+        # self.window.bind_all("<MouseWheel>", self.mouseScroll)
+        if sys.platform == "darwin":
+            self.canvas.bind("<Button-4>", self.scrollUp)
+            self.canvas.bind("<Button-5>", self.scrollDown)
+            self.canvas.bind("<Button-2>", self.mouseScroll)
+            self.canvas.bind("<MouseWheel>", self.mouseScroll)
+
+            # For newer versions of macOS and Tk
+            self.canvas.bind("<MouseWheel>", lambda e: self.mouseScroll(e))
+
         self.display_list = []
 
     def scrollUp(self, e):
         self.scroll -= SCROLL_STEP
+        self.scroll = max(0, self.scroll)
         self.draw()
 
     def scrollDown(self, e):
         self.scroll += SCROLL_STEP
         self.draw()
+
+    def mouseScroll(self, e):
+        print(e.delta, "touch pad scrolling")
+        if hasattr(e, 'delta'):
+            if e.delta > 0:
+                self.scrollUp(e)
+            else:
+                self.scrollDown(e)
 
     def draw(self):
         self.canvas.delete("all")
@@ -180,7 +237,7 @@ if __name__ == "__main__":
     import sys
     if (len(sys.argv) == 1):
         # specify a file to load
-        Browser().load("./g_index.g_index.html")
+        Browser().load("./g_index.html")
     else:
         Browser().load(sys.argv[1])
 
