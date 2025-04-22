@@ -1,7 +1,7 @@
 import tkinter
 from url_handler import URL, Text, load
 from tkinter.font import Font
-from parser import HTMLParser
+from parser import HTMLParser, print_tree
 from sys import platform
 
 WIDTH, HEIGHT = 800, 600
@@ -11,6 +11,13 @@ HSTEP, VSTEP = 13, 18
 
 FONTS = {}
 
+BLOCK_ELEMENTS = [
+    "html", "body", "article", "section", "nav", "aside", "h1",
+    "h2", "h3", "h4", "h5", "h6", "hgroup", "header", "footer",
+    "address", "p", "hr", "pre", "blockquote", "ol", "ul", "menu",
+    "li", "dl", "dt", "dd", "figure", "figcaption", "main", "div",
+    "table", "form", "fieldset","legend", "details", "summary"
+]
 
 def get_font(size, weight, slant):
     key = (size, weight, slant)
@@ -25,8 +32,13 @@ def get_font(size, weight, slant):
     return FONTS[key][0]
 
 
-class Layout:
-    def __init__(self, tree):
+class BlockLayoutLayout:
+    def __init__(self, node, parent, previous):
+        self.node = node
+        self.parent = parent
+        self.previous = previous
+        self.children = []
+
         self.display_list = []
 
         self.cursor_x = HSTEP
@@ -37,34 +49,47 @@ class Layout:
 
         self.line = []
 
-        self.recurse(tree)
+        self.recurse(node)
         self.flush()
 
-    def open_tag(self, tag):
-        if tag == "i":
-            self.style = "italic"
-        elif tag == "b":
-            self.weight = "bold"
-        elif tag == "small":
-            self.size -= 2
-        elif tag == "big":
-            self.size += 4
-        elif tag == "br":
-            self.flush()
+        self.x = None
+        self.y = None
+        self.width = None
+        self.height = None
 
-    def close_tag(self, tag):
-        if tag == "i":
-            self.style = "roman"
-        elif tag == "b":
+    def layout_mode(self):
+        if isinstance(self.node, Text):
+            return "inline"
+        elif any([isinstance(child, Element)and child.tag in BLOCK_ELEMENTS for child in self.node.children]):
+            return "block"
+        elif self.node.children:
+            return "inline"
+        else:
+            return "block"
+    
+    def layout(self):
+        mode = self.layout_mode()
+
+        if mode == "block":
+            previous = None
+
+            for child in self.node.children:
+                next = BlockLayout(child, self, previous)
+                self.children.append(next)
+                previous = next
+        else:
+            self.cursor_x = 0
+            self.cursor_y = 0
             self.weight = "normal"
-        elif tag == "small":
-            self.size += 2
-        elif tag == "big":
-            self.size -= 4
-        elif tag == "p":
-            self.flush()
-            self.cursor_y += VSTEP
+            self.style = "roma"
+            font.size = 12
 
+            self.line = []
+            self.recurse(self.node)
+            self.flush()
+        
+        for child in self.children:
+            child.layout()
     def recurse(self, tree):
         if isinstance(tree, Text):
             for word in tree.text.split():
@@ -107,38 +132,30 @@ class Layout:
                 self.recurse(child)
             self.close_tag(tree.tag)
 
-    # def token(self, tok):
-    #     if isinstance(tok, Text):
-    #         for word in tok.text.split():
-    #             self.word(word)
+    def open_tag(self, tag):
+        if tag == "i":
+            self.style = "italic"
+        elif tag == "b":
+            self.weight = "bold"
+        elif tag == "small":
+            self.size -= 2
+        elif tag == "big":
+            self.size += 4
+        elif tag == "br":
+            self.flush()
 
-    #     elif tok.tag == "i":
-    #         self.style = "italic"
-    #     elif tok.tag == "/i":
-    #         self.style = "roman"
-    #     elif tok.tag == "b":
-    #         self.weight = "bold"
-    #     elif tok.tag == "/b":
-    #         self.weight = "normal"
-    #     elif tok.tag == "small":
-    #         self.size -= 2
-    #     elif tok.tag == "/small":
-    #         self.size += 2
-    #     elif tok.tag == "big":
-    #         self.size += 4
-    #     elif tok.tag == "/big":
-    #         self.size -= 4
-    #     elif tok.tag == "br":
-    #         self.flush()
-    #     elif tok.tag == "/p":
-    #         self.flush()
-    #         self.cursor_y += VSTEP
-
-    #     self.cursor_x += HSTEP
-    #     if self.cursor_x >= WIDTH - HSTEP:
-    #         self.cursor_y += VSTEP
-    #         self.cursor_x = HSTEP
-
+    def close_tag(self, tag):
+        if tag == "i":
+            self.style = "roman"
+        elif tag == "b":
+            self.weight = "normal"
+        elif tag == "small":
+            self.size += 2
+        elif tag == "big":
+            self.size -= 4
+        elif tag == "p":
+            self.flush()
+            self.cursor_y += VSTEP
     def word(self, word):
         font = get_font(self.size, self.weight, self.style)
         w = font.measure(word)
@@ -169,7 +186,18 @@ class Layout:
         self.cursor_x = HSTEP
         self.line = []
 
+    def paint(self):
 
+class DocumentLayout:
+    def __init__(self, node):
+        self.node = node
+        self.parent = None
+        self.children = []
+
+    def layout(self):
+        child = BlockLayout(self.node, self, None)
+        self.children.append(child)
+        child.layout()
 class Browser:
     def __init__(self):
         self.window = tkinter.Tk()
@@ -229,7 +257,10 @@ class Browser:
     def load(self, url):
         body = load(URL(url))
         self.nodes = HTMLParser(body).parse()
+        print_tree(self.nodes)
         self.display_list = Layout(self.nodes).display_list
+        self.document = Layout(self.nodes)
+        self.document.layout()
         self.draw()
 
 

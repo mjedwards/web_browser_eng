@@ -4,6 +4,8 @@ from url_handler import Element, Text
 
 
 class HTMLParser:
+    HEAD_TAGS = ["base", "basefont", "bgsound", "noscript", "link", "meta",
+                         "title", "style", "script"]
     def __init__(self, body):
         self.body = body
         self.unfinished = []
@@ -31,7 +33,8 @@ class HTMLParser:
     def add_text(self, text):
         if text.isspace():
             return
-        print(self.unfinished[-1])
+
+        # self.implicit_tags(None)
         parent = self.unfinished[-1]
         node = Text(text, parent)
         parent.children.append(node)
@@ -44,6 +47,8 @@ class HTMLParser:
 
         if tag.startswith("!"):
             return
+        
+        # self.implicit_tags(tag)
 
         if tag.startswith("/"):
             if len(self.unfinished) == 1:
@@ -82,6 +87,21 @@ class HTMLParser:
                 attributes[attrpair.casefold()] = ""
 
         return tag, attributes
+
+    def implicit_tags(self, tag):
+        while True:
+            open_tags = [node.tag for node in self.unfinished]
+
+            if open_tags == [] and tag != "html":
+                self.add_tag("html")
+            elif open_tags == ["html"] and tag not in ["head", "body", "/html"]:
+                if tag in self.HEAD_TAGS:
+                    self.add_tag("head")
+                else:
+                    self.add_tag("body")
+            
+            elif open_tags == ["html, head"] and tag not in ["/head"] + self.HEAD_TAGS:
+                    self.add_tag("/head")
 
 
 def print_tree(node, indent=0):
